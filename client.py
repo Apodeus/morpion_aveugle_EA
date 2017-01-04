@@ -29,7 +29,7 @@ def main():
 			shot = selectCase()
 			socket_client.send( str.encode(str(shot) ))
 			data = None
-		else:
+		elif data != 'begin':
 			if(len(data) != 0):
 				print(data)
 	socket_client.close()
