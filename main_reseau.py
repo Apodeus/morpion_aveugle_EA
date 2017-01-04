@@ -39,6 +39,119 @@ import random
 # from grid import *
 # import  random
 
+class Client:
+
+	cId = None
+	socket = None
+	score = 0
+
+	def __init__(self, socket):
+		self.socket = socket
+
+	def setId(self, cid):
+		this.cId = cid
+
+	def sendMessage(self, text):
+		self.socket.send(str.encode(text))
+
+class Player:
+
+	pGrid = None
+	pClient = None
+	pId = 0
+
+
+	def __init__(self, client):
+		self.pGrid = grid()
+		self.pClient = client
+
+	def setId(self, pid):
+		self.pId = pid
+
+	def sendMessage(self, text):
+		self.pClient.sendMessage(text)
+
+	def displayGrid(self):
+		self.sendMessage(pGrid.displayStr())
+
+class Host:
+
+	listClient = []
+	socketListener = None
+	currentPlayer = -1
+	hGrid = None
+	players = []
+	specs = []
+
+	def __init__(self, socketListener):
+		self.socketListener = socketListener
+		self.hGrid = grid()
+
+	def isGameOver(self):
+		if self.hGrid.gameOver() != -1 :
+			self.currentPlayer = -1
+		return self.hGrid.gameOver()
+
+	def playMove(self, case):	#returns 1 if ok
+		if self.hGrid.cells[case] == EMPTY:
+			self.hGrid.play(self.currentPlayer, case)
+			return 1
+		else:
+			p = self.getPlayer(currentPlayer)
+			p.pGrid[case] = self.hGrid[case]
+			return 0
+
+	def switchPlayer(self):
+		self.currentPlayer = (self.currentPlayer + 1) % 2
+
+	def addNewClient(self, socket):
+		(socket_recv, addr_recv) = self.socketListener.accept()
+		c = Client(socket_recv)
+		self.listClient.append(c)
+		c.setId(len(listClient))
+
+	def setNewPlayer(self, client):
+		if len(self.players) <= 1:
+			p = Player(client)
+			self.players.append(p)
+			p.setId(len(self.players))
+		else:
+			return
+
+	def getPlayerId(self, socket):
+		for p in self.players:
+			if socket == p.pClient.socket:
+				return p.pId
+		return -1
+
+	def getPlayer(self, pid):
+		for p in self.players:
+			if pid == p.pId:
+				return p
+		return -1
+
+	def getCliendId(self, socket):
+		for c in listClient:
+			if socket == c.cId:
+				return c.cId
+		return -1
+
+	def getClient(self, cid):
+		for c in clients:
+			if cid == c.cId:
+				return c
+		return -1
+
+	def isGameReady(self):
+		if len(players) == 2:
+			return 1
+		return 0
+
+	def startGame(self):
+		self.hGrid = grid()
+		self.currentPlayer = 1
+
+
 def printGridPlayer(socket, str_grid):
 	socket.send(str.encode(str_grid))
 
@@ -50,7 +163,6 @@ def sendBegin(socket_j1, socket_j2, current_player):
 		socket_j1.send(str.encode("begin"))
 	else:
 		socket_j2.send(str.encode("begin"))
-
 
 def playMove(bytes_recv, socket_player):
 	global current_player 
@@ -68,7 +180,7 @@ def playMove(bytes_recv, socket_player):
 		current_player = current_player%2 + 1
 	print("c'est au tour du joueur" + str(current_player) )
 
-def main():
+def main_old():
 	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
 	socket_listen.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 	socket_listen.bind(('', 7777))
@@ -81,7 +193,6 @@ def main():
 
 	global current_player 
 	global grids 
-
 	current_player = J1
 	grids = [grid(), grid(), grid()]
 
@@ -148,10 +259,44 @@ def main():
 	socket_j2.close()
 
 
+def main():
+	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
+	socket_listen.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+	socket_listen.bind(('', 7777))
+	socket_listen.listen(1)
+
+	host = Host(socket_listen)
+
+	while(1):
+		if (host.isGameOver() == 1):
+			host.getPlayer(host.isGameOver()).sendMessage("You win")
+			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
+		(ready_sockets, [], []) = select.select(host.listClient, [], [])
+		for current_socket in ready_sockets:
+			if current_socket == host.socketListener:
+				host.addNewClient(socket)
+				print("Nouveau client connecté")
+			else:
+				cId = host.getClientId(socket)
+				pId = host.getPlayerId(socket)
+				bytes_recv = current_socket.recv(1024)
+				if pId != -1:
+					if pId == host.currentPlayer:
+						if host.playMove(bytes_recv) == 1:
+							host.switchPlayer()
+						host.getPlayerId(pId).displayGrid()
+				else:
+					if bytes_recv == "play":
+						host.setNewPlayer(host.getClient(cId))
+						if host.isGameReady() == 1:
+							host.startGame()
+						else:
+							host.getClient(cId).sendMessage("Waiting opposent...")
 
 
 
-		
+
+
 
 
 
