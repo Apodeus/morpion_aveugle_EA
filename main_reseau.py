@@ -110,7 +110,7 @@ class Host:
 		(socket_recv, addr_recv) = self.socketListener.accept()
 		c = Client(socket_recv)
 		self.listClient.append(c)
-		self.listSockets.append(socket)
+		self.listSockets.append(socket_recv)
 		c.setId(len(self.listClient))
 
 	def setNewPlayer(self, client):
@@ -271,9 +271,8 @@ def main():
 	host = Host(socket_listen)
 
 	while(1):
-		if (host.isGameOver() == 1):
-			host.getPlayer(host.isGameOver()).sendMessage("You win")
-			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
+		
+		print(host.listSockets)
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener:
