@@ -60,7 +60,6 @@ class Player:
 	pClient = None
 	pId = 0
 
-
 	def __init__(self, client):
 		self.pGrid = grid()
 		self.pClient = client
@@ -71,8 +70,14 @@ class Player:
 	def sendMessage(self, text):
 		self.pClient.sendMessage(text)
 
+	def getPlayerGrid(self):
+	grid_str = "$display $"
+	for i in range(3):
+		grid_str = grid_str + symbols[self.pGrid.cells[i*3]] +  symbols[self.pGrid.cells[i*3+1]] +  symbols[self.pGrid.cells[i*3+2]] 
+	return grid_str
+
 	def displayGrid(self):
-		self.sendMessage(pGrid.displayStr())
+		self.sendMessage(self.getPlayerGrid())
 
 class Host:
 
@@ -159,6 +164,8 @@ class Host:
 		for p in self.players:
 			p.sendMessage("$gamestart")
 		self.switchPlayer()
+
+
 
 
 def printGridPlayer(socket, str_grid):

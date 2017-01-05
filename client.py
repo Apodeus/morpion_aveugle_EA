@@ -26,6 +26,11 @@ class thread_r(threading.Thread):
 				elif data == "$play" or data == "$gamestart$play":
 					print("Quelle case allez vous jouer ? (0-8)")
 					play_mode = 1;
+				elif data[0] == "$display":
+					grid_str = "-------------\n"
+					for i in range(3):
+						grid_str = grid_str + "| " + data[1][i*3] + " | " +  data[1][i*3+1] + " | " +  data[1][i*3+2] + " |\n" + "-------------\n"
+					print(grid)
 				else:
 					print(data)
 
