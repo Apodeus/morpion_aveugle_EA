@@ -104,7 +104,10 @@ class Host:
 			return 0
 
 	def switchPlayer(self):
+		if self.currentPlayer == -1:
+			self.currentPlayer += 1
 		self.currentPlayer = (self.currentPlayer + 1) % 2
+		self.players[self.currentPlayer].sendMessage("$play")
 
 	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
@@ -151,8 +154,11 @@ class Host:
 		return 0
 
 	def startGame(self):
+		print("Game start")
 		self.hGrid = grid()
-		self.currentPlayer = 1
+		for p in self.players:
+			p.sendMessage("$gamestart")
+		self.switchPlayer()
 
 
 def printGridPlayer(socket, str_grid):
@@ -272,7 +278,6 @@ def main():
 
 	while(1):
 		
-		print(host.listSockets)
 		if (host.isGameOver() == 1):
 			host.getPlayer(host.isGameOver()).sendMessage("You win")
 			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
@@ -281,7 +286,6 @@ def main():
 			if current_socket == host.socketListener:
 				host.addNewClient()
 				print("Nouveau client connecté")
-				host.listSockets[1].send(str.encode("coucou"))
 			else:
 				cId = host.getClientId(current_socket)
 				pId = host.getPlayerId(current_socket)

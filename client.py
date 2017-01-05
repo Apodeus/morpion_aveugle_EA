@@ -11,6 +11,7 @@ ip=''
 port = 7777
 
 play_mode = 0;
+expect_answer = 0;
 class thread_r(threading.Thread):
 	def __init__(self, s):
 		threading.Thread.__init__(self)
@@ -20,7 +21,10 @@ class thread_r(threading.Thread):
 		while(True):
 			data = bytes.decode(self.socket_client.recv(1024) )
 			if (len(data) != 0):
-				if data == "$play":
+				if data == "$gamestart":
+					print("Début de la partie")
+				elif data == "$play" or data == "$gamestart$play":
+					print("Quelle case allez vous jouer ? (0-8)")
 					play_mode = 1;
 				else:
 					print(data)
@@ -32,7 +36,7 @@ class thread_s(threading.Thread):
 
 	def run(self):
 		while True:
-			text = input("Quelle case allez vous jouer ? (0-8)")
+			text = input("")
 			if play_mode == 1:
 				self.socket_client.send(str.encode(str(int(text))))
 			else:
