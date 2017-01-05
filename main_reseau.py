@@ -106,7 +106,7 @@ class Host:
 	def switchPlayer(self):
 		self.currentPlayer = (self.currentPlayer + 1) % 2
 
-	def addNewClient(self, socket):
+	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
 		c = Client(socket_recv)
 		self.listClient.append(c)
@@ -133,20 +133,20 @@ class Host:
 				return p
 		return -1
 
-	def getCliendId(self, socket):
-		for c in listClient:
-			if socket == c.cId:
+	def getClientId(self, socket):
+		for c in self.listClient:
+			if socket == c.socket:
 				return c.cId
 		return -1
 
 	def getClient(self, cid):
-		for c in clients:
+		for c in self.listClient:
 			if cid == c.cId:
 				return c
 		return -1
 
 	def isGameReady(self):
-		if len(players) == 2:
+		if len(self.players) == 2:
 			return 1
 		return 0
 
@@ -276,12 +276,13 @@ def main():
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener:
-				host.addNewClient(socket)
+				host.addNewClient()
 				print("Nouveau client connecté")
+				host.listSockets[1].send(str.encode("coucou"))
 			else:
-				cId = host.getClientId(socket)
-				pId = host.getPlayerId(socket)
-				bytes_recv = current_socket.recv(1024)
+				cId = host.getClientId(current_socket)
+				pId = host.getPlayerId(current_socket)
+				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if pId != -1:
 					if pId == host.currentPlayer:
 						if host.playMove(bytes_recv) == 1:
@@ -293,6 +294,7 @@ def main():
 						if host.isGameReady() == 1:
 							host.startGame()
 						else:
+							print(cId)
 							host.getClient(cId).sendMessage("Waiting opposent...")
 
 
