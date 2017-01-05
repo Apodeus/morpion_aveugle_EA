@@ -37,10 +37,12 @@ class grid:
 
 
     def displayStr(self):
-        grid_str = "-------------\n"
-        for i in range(3):
-            grid_str = grid_str + "| " + symbols[self.cells[i*3]] + " | " +  symbols[self.cells[i*3+1]] + " | " +  symbols[self.cells[i*3+2]] + " |\n" + "-------------\n"
+        # for i in range(3):
+        #     grid_str = grid_str + "| " + symbols[self.cells[i*3]] + " | " +  symbols[self.cells[i*3+1]] + " | " +  symbols[self.cells[i*3+2]] + " |\n" + "-------------\n"
 
+        grid_str = "$display $"
+        for i in range(3):
+            grid_str = grid_str + str(self.cells[i*3]) +  str(self.cells[i*3+1]) + str(self.cells[i*3+2])
         return grid_str
 
     """ Test if 'player' wins the game"""

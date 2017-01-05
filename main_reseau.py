@@ -75,9 +75,8 @@ class Player:
 		self.pClient.sendMessage(text)
 
 	def getPlayerGrid(self):
-		grid_str = "$display $"
-		for i in range(3):
-			grid_str = grid_str + symbols[self.pGrid.cells[i*3]] +  symbols[self.pGrid.cells[i*3+1]] +  symbols[self.pGrid.cells[i*3+2]] 
+		grid_str = self.pGrid.displayStr()
+		# print(grid_str)
 		return grid_str
 
 	def displayGrid(self):
@@ -103,14 +102,14 @@ class Host:
 			self.currentPlayer = -1
 		return self.hGrid.gameOver()
 
-	def playMove(self, case):	#returns 1 if ok
+	def playMove(self, case):	#returns True if ok
 		if self.hGrid.cells[case] == EMPTY:
 			self.hGrid.play(self.currentPlayer, case)
-			return 1
+			return True
 		else:
 			p = self.getPlayer(currentPlayer)
 			p.pGrid[case] = self.hGrid[case]
-			return 0
+			return False
 
 	def switchPlayer(self):
 		if self.currentPlayer == -1:
@@ -167,6 +166,7 @@ class Host:
 		self.hGrid = grid()
 		for p in self.players:
 			p.sendMessage("$gamestart")
+			p.displayGrid()
 		self.switchPlayer()
 
 
@@ -294,17 +294,17 @@ def main():
 			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
-			if current_socket == host.socketListener:
+			if current_socket == host.socketListener: #Connexion d'un nouveau client
 				host.addNewClient()
 				print("Nouveau client connecté")
-			else:
+			else: 
 				cId = host.getClientId(current_socket)
 				pId = host.getPlayerId(current_socket)
 				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if pId != -1:
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer:
-						if host.playMove(bytes_recv) == 1:
+						if host.playMove(int(bytes_recv)):
 							spec_message = player.pClient.name
 							if spec_message == "nameless":
 								spec_message = "Player" + host.currentPlayer
@@ -314,7 +314,7 @@ def main():
 									c.sendMessage(spec_message)
 									c.sendMessage(host.hGrid.displayStr())
 							host.switchPlayer()
-						host.getPlayerId(pId).displayGrid()
+						host.getPlayer(pId).displayGrid()
 				else:
 					client = host.getClient(cId)
 					if bytes_recv == "play":
@@ -335,12 +335,6 @@ def main():
 							else:
 								print(client.name + " changed name to " + command[1])
 							client.setName(command[1])
-
-
-
-
-
-
 
 
 
