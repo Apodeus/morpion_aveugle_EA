@@ -291,8 +291,9 @@ def main():
 				looser = host.getPlayer(J1)
 				winner = host.getPlayer(J2)
 
-			winner.sendMessage("$end $win")
-			looser.sendMessage("$end $loose")
+			if end_winner != EMPTY:
+				winner.sendMessage("$end $win")
+				looser.sendMessage("$end $loose")
 
 
 			# winner = host.getPlayer(host.isGameOver())
