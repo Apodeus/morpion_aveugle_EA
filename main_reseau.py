@@ -169,6 +169,18 @@ class Host:
 			p.displayGrid()
 		self.switchPlayer()
 
+	def getScores(self):
+		l = sorted(self.listClient, key=lambda x: x.score, reverse=True)
+		return l
+
+	def getScoresString(self):
+		l = self.getScores()
+		s = ""
+		for i in range(len(l)):
+			s += str(i + 1) + ":" + l[i].name + " with " + str(l[i].score) + " wins\n"
+		return s
+
+
 
 
 
@@ -290,8 +302,11 @@ def main():
 	while(1):
 		
 		if (host.isGameOver() == 1):
-			host.getPlayer(host.isGameOver()).sendMessage("You win")
-			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
+			winner = host.getPlayer(host.isGameOver())
+			winner.sendMessage("You win")
+			winner.pClient.score += 1
+			looser = host.getPlayer((host.isGameOver() + 1 )% 2)
+			looser.sendMessage("You loose")
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
@@ -310,7 +325,7 @@ def main():
 								spec_message = "Player" + host.currentPlayer
 							spec_message += " played on case " + bytes_recv + "\n"
 							for c in host.listClient:
-								if c.cId != host.players[0].pClient.cId && c.cId != host.players[1].pClient.cId:
+								if c.cId != host.players[0].pClient.cId and c.cId != host.players[1].pClient.cId:
 									c.sendMessage(spec_message)
 									c.sendMessage(host.hGrid.displayStr())
 							host.switchPlayer()
@@ -327,6 +342,8 @@ def main():
 							for c in host.listClient:
 								if c.cId != cId:
 									c.sendMessage(client.name + " is looking for an opponent") 
+					if bytes_recv == "lead":
+						client.sendMessage(host.getScoresString())
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
 						command = bytes_recv.split(':')
 						if command[0] == "name": 			#set client name
