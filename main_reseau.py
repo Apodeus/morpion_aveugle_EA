@@ -302,8 +302,17 @@ def main():
 				pId = host.getPlayerId(current_socket)
 				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if pId != -1:
+					player = host.getPlayer(pId)
 					if pId == host.currentPlayer:
 						if host.playMove(bytes_recv) == 1:
+							spec_message = player.pClient.name
+							if spec_message == "nameless":
+								spec_message = "Player" + host.currentPlayer
+							spec_message += " played on case " + bytes_recv + "\n"
+							for c in host.listClient:
+								if c.cId != host.players[0].pClient.cId && c.cId != host.players[1].pClient.cId:
+									c.sendMessage(spec_message)
+									c.sendMessage(host.hGrid.displayStr())
 							host.switchPlayer()
 						host.getPlayerId(pId).displayGrid()
 				else:
