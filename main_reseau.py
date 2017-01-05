@@ -72,7 +72,7 @@ class Player:
 
 	def getPlayerGrid(self):
 		grid_str = self.pGrid.displayStr()
-		# print(grid_str)
+		print(grid_str)
 		return grid_str
 
 	def displayGrid(self):
@@ -101,17 +101,18 @@ class Host:
 	def playMove(self, case):	#returns True if ok
 		if self.hGrid.cells[case] == EMPTY:
 			self.hGrid.play(self.currentPlayer, case)
+			self.players[self.currentPlayer - 1].pGrid.play(self.currentPlayer, case)
 			return True
 		else:
-			p = self.getPlayer(currentPlayer)
-			p.pGrid[case] = self.hGrid[case]
+			p = self.players[self.currentPlayer - 1]
+			p.pGrid.cells[case] = self.hGrid.cells[case]
 			return False
 
 	def switchPlayer(self):
 		if self.currentPlayer == -1:
-			self.currentPlayer += 1
-		self.currentPlayer = (self.currentPlayer + 1) % 2
-		self.players[self.currentPlayer].sendMessage("$play")
+			self.currentPlayer = 1
+		self.players[self.currentPlayer - 1].sendMessage("$play")
+		self.currentPlayer = (self.currentPlayer % 2 ) + 1
 
 	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
@@ -287,7 +288,7 @@ def main():
 		
 		if (host.isGameOver() == 1):
 			host.getPlayer(host.isGameOver()).sendMessage("You win")
-			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
+			host.getPlayer((host.isGameOver() %2 ) + 1).sendMessage("You loose")
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
@@ -299,9 +300,10 @@ def main():
 				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if pId != -1:
 					if pId == host.currentPlayer:
-						if host.playMove(int(bytes_recv)):
-							host.switchPlayer()
+						isMoveOk = host.playMove(int(bytes_recv))
 						host.getPlayer(pId).displayGrid()
+						if isMoveOk:
+							host.switchPlayer()
 				else:
 					if bytes_recv == "play":
 						host.setNewPlayer(host.getClient(cId))

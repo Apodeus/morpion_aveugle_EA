@@ -29,7 +29,7 @@ class thread_r(threading.Thread):
 						word = parsed_data[i]
 						if word == "$gamestart":
 							print("Début de la partie")
-						elif data == "$play":
+						elif word == "$play":
 							print("Quelle case allez vous jouer ? (0-8)")
 							play_mode = 1;
 
