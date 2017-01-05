@@ -313,8 +313,11 @@ def main():
 						if host.isGameReady() == 1:
 							host.startGame()
 						else:
-							print(cId)
+							print(client.name + " is looking for an opponent")
 							host.getClient(cId).sendMessage("Waiting for opponent...")
+							for c in host.listClient:
+								if c.cId != cId:
+									c.sendMessage(client.name + " is looking for an opponent") 
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
 						command = bytes_recv.split(':')
 						if command[0] == "name": 			#set client name
