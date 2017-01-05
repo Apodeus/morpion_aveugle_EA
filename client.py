@@ -41,6 +41,15 @@ class thread_r(threading.Thread):
 							for case_i in range(3):
 								grid_str = grid_str + "| " + symbols[int(word2[case_i*3 + 1])] + " | " +  symbols[int(word2[case_i*3+1 + 1])] + " | " +  symbols[int(word2[case_i*3+2 + 1])] + " |\n" + "-------------\n"
 							print(grid_str)
+
+						elif word == "$end":
+							i += 1
+							play_mode = 0
+							word2 = parsed_data[i]
+							if word2 == "$win":
+								print("You win")
+							elif word2 == "$loose":
+								print("You loose")
 				else:
 					print(data)
 

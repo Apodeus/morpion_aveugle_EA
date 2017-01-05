@@ -185,7 +185,10 @@ class Host:
 			s += str(i + 1) + ":" + l[i].name + " with " + str(l[i].score) + " wins\n"
 		return s
 
-
+	def endGame(self):
+		self.players.remove(self.getPlayer(1))
+		self.players.remove(self.getPlayer(2))
+		self.hGrid = grid()
 
 
 
@@ -308,10 +311,11 @@ def main():
 		
 		if (host.isGameOver() == 1):
 			winner = host.getPlayer(host.isGameOver())
-			winner.sendMessage("You win")
+			winner.sendMessage("$end $win")
 			winner.pClient.score += 1
-			looser = host.getPlayer((host.isGameOver() + 1 )% 2)
-			looser.sendMessage("You loose")
+			looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
+			looser.sendMessage("$end $loose")
+			host.endGame()
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
