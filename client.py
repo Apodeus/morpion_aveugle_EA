@@ -7,6 +7,8 @@ from grid import *
 import random
 import sys
 
+import re
+
 ip=''
 port = 7777
 
@@ -21,16 +23,20 @@ class thread_r(threading.Thread):
 		while(True):
 			data = bytes.decode(self.socket_client.recv(1024) )
 			if (len(data) != 0):
-				if data == "$gamestart":
-					print("Début de la partie")
-				elif data == "$play" or data == "$gamestart$play":
-					print("Quelle case allez vous jouer ? (0-8)")
-					play_mode = 1;
-				elif data[0] == "$display":
-					grid_str = "-------------\n"
-					for i in range(3):
-						grid_str = grid_str + "| " + data[1][i*3] + " | " +  data[1][i*3+1] + " | " +  data[1][i*3+2] + " |\n" + "-------------\n"
-					print(grid)
+				sen = re.findall('\$[a-zA-Z0-9]+', data)
+				if sen:
+					for i in range(len(sen)):
+						w = sen[i]
+						if w == "$gamestart":
+							print("Début de la partie")
+						elif data == "$play":
+							print("Quelle case allez vous jouer ? (0-8)")
+							play_mode = 1;
+						elif data[0] == "$display":
+							grid_str = "-------------\n"
+							for i in range(3):
+								grid_str = grid_str + "| " + data[1][i*3] + " | " +  data[1][i*3+1] + " | " +  data[1][i*3+2] + " |\n" + "-------------\n"
+							print(grid)
 				else:
 					print(data)
 
