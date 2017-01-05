@@ -72,7 +72,7 @@ class Player:
 		self.pClient.sendMessage(text)
 
 	def displayGrid(self):
-		self.sendMessage(pGrid.displayStr())
+		self.sendMessage(self.pGrid.displayStr())
 
 class Host:
 
