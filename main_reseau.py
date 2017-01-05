@@ -278,13 +278,30 @@ def main():
 
 	while(1):
 		
-		if (host.isGameOver() == 1):
-			winner = host.getPlayer(host.isGameOver())
+		if (host.isGameOver() != -1): #Si la partie est fini
+			end_winner = host.isGameOver()
+			if end_winner == EMPTY:#draw
+				for player in host.players:
+					player.sendMessage("$end $draw")
+			elif end_winner == J1:#J1 a gagné
+				looser = host.getPlayer(J2)
+				winner = host.getPlayer(J1)
+
+			elif end_winner == J2:#J2 a gagné
+				looser = host.getPlayer(J1)
+				winner = host.getPlayer(J2)
+
 			winner.sendMessage("$end $win")
-			winner.pClient.score += 1
-			looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
 			looser.sendMessage("$end $loose")
+
+
+			# winner = host.getPlayer(host.isGameOver())
+			# winner.sendMessage("$end $win")
+			# winner.pClient.score += 1
+			# looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
+			# looser.sendMessage("$end $loose")
 			host.endGame()
+
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
@@ -298,10 +315,10 @@ def main():
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer:
 						isMoveOk = host.playMove(int(bytes_recv))
-						if isMoveOk:
+						if isMoveOk: #Si l'action s'est bien déroulé
 							spec_message = player.pClient.name
 							if spec_message == "nameless":
-								spec_message = "Player" + host.currentPlayer
+								spec_message = "Player" + str(host.currentPlayer)
 							spec_message += " played on case " + bytes_recv + "\n"
 							for c in host.listClient:
 								if c.cId != host.players[0].pClient.cId and c.cId != host.players[1].pClient.cId:

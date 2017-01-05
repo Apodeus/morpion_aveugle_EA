@@ -50,6 +50,9 @@ class thread_r(threading.Thread):
 								print("You win")
 							elif word2 == "$loose":
 								print("You loose")
+							elif word2 == "$draw":
+								print("Draw !")
+
 				else:
 					print(data)
 
