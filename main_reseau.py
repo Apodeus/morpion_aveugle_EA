@@ -76,7 +76,7 @@ class Player:
 
 	def getPlayerGrid(self):
 		grid_str = self.pGrid.displayStr()
-		# print(grid_str)
+		print(grid_str)
 		return grid_str
 
 	def displayGrid(self):
@@ -103,19 +103,24 @@ class Host:
 		return self.hGrid.gameOver()
 
 	def playMove(self, case):	#returns True if ok
-		if self.hGrid.cells[case] == EMPTY:
+		if self.hGrid.cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
 			self.hGrid.play(self.currentPlayer, case)
+			self.players[self.currentPlayer - 1].pGrid.play(self.currentPlayer, case)
+			self.players[self.currentPlayer - 1].displayGrid()
 			return True
-		else:
-			p = self.getPlayer(currentPlayer)
-			p.pGrid[case] = self.hGrid[case]
+		else: #sinon on met a jour la grille du joueur et on lui redonne la main pour jouer
+			p = self.players[self.currentPlayer - 1]
+			p.pGrid.cells[case] = self.hGrid.cells[case]
+			p.displayGrid()
+			p.sendMessage("$play")
 			return False
 
 	def switchPlayer(self):
 		if self.currentPlayer == -1:
 			self.currentPlayer += 1
-		self.currentPlayer = (self.currentPlayer + 1) % 2
-		self.players[self.currentPlayer].sendMessage("$play")
+		self.currentPlayer = (self.currentPlayer % 2 ) + 1
+		self.players[self.currentPlayer - 1].sendMessage("$play")
+		
 
 	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
@@ -164,7 +169,7 @@ class Host:
 	def startGame(self):
 		print("Game start")
 		self.hGrid = grid()
-		for p in self.players:
+		for p in self.players:#la partie commence, on affiche les grilles de chaque joueur et on donne la main au 1er joueur
 			p.sendMessage("$gamestart")
 			p.displayGrid()
 		self.switchPlayer()
@@ -319,7 +324,8 @@ def main():
 				if pId != -1:
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer:
-						if host.playMove(int(bytes_recv)):
+						isMoveOk = host.playMove(int(bytes_recv))
+						if isMoveOk:
 							spec_message = player.pClient.name
 							if spec_message == "nameless":
 								spec_message = "Player" + host.currentPlayer
@@ -329,7 +335,6 @@ def main():
 									c.sendMessage(spec_message)
 									c.sendMessage(host.hGrid.displayStr())
 							host.switchPlayer()
-						host.getPlayer(pId).displayGrid()
 				else:
 					client = host.getClient(cId)
 					if bytes_recv == "play":
