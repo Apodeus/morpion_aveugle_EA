@@ -23,20 +23,23 @@ class thread_r(threading.Thread):
 		while(True):
 			data = bytes.decode(self.socket_client.recv(1024) )
 			if (len(data) != 0):
-				sen = re.findall('\$[a-zA-Z0-9]+', data)
-				if sen:
-					for i in range(len(sen)):
-						w = sen[i]
-						if w == "$gamestart":
+				parsed_data = re.findall('\$[a-zA-Z0-9]+', data)
+				if parsed_data:
+					for i in range(len(parsed_data)):
+						word = parsed_data[i]
+						if word == "$gamestart":
 							print("Début de la partie")
 						elif data == "$play":
 							print("Quelle case allez vous jouer ? (0-8)")
 							play_mode = 1;
-						elif data[0] == "$display":
+
+						elif word == "$display":
+							i = i + 1
+							word2 = parsed_data[i]
 							grid_str = "-------------\n"
-							for i in range(3):
-								grid_str = grid_str + "| " + data[1][i*3] + " | " +  data[1][i*3+1] + " | " +  data[1][i*3+2] + " |\n" + "-------------\n"
-							print(grid)
+							for case_i in range(3):
+								grid_str = grid_str + "| " + word2[case_i*3 + 1] + " | " +  word2[case_i*3+1 + 1] + " | " +  word2[case_i*3+2 + 1] + " |\n" + "-------------\n"
+							print(grid_str)
 				else:
 					print(data)
 
