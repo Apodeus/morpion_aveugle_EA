@@ -290,8 +290,8 @@ def main():
 			elif end_winner == J2:#J2 a gagné
 				looser = host.getPlayer(J1)
 				winner = host.getPlayer(J2)
-
-			if end_winner != EMPTY:
+				
+			if end_winner != EMPTY :
 				winner.sendMessage("$end $win")
 				winner.pClient.score += 1
 				looser.sendMessage("$end $loose")
