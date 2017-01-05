@@ -273,6 +273,9 @@ def main():
 	while(1):
 		
 		print(host.listSockets)
+		if (host.isGameOver() == 1):
+			host.getPlayer(host.isGameOver()).sendMessage("You win")
+			host.getPlayer((host.isGameOver() + 1 )% 2).sendMessage("You loose")
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener:
