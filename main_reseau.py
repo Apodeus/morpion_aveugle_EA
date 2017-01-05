@@ -99,20 +99,24 @@ class Host:
 		return self.hGrid.gameOver()
 
 	def playMove(self, case):	#returns True if ok
-		if self.hGrid.cells[case] == EMPTY:
+		if self.hGrid.cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
 			self.hGrid.play(self.currentPlayer, case)
 			self.players[self.currentPlayer - 1].pGrid.play(self.currentPlayer, case)
+			self.players[self.currentPlayer - 1].displayGrid()
 			return True
-		else:
+		else: #sinon on met a jour la grille du joueur et on lui redonne la main pour jouer
 			p = self.players[self.currentPlayer - 1]
 			p.pGrid.cells[case] = self.hGrid.cells[case]
+			p.displayGrid()
+			p.sendMessage("$play")
 			return False
 
 	def switchPlayer(self):
 		if self.currentPlayer == -1:
-			self.currentPlayer = 1
-		self.players[self.currentPlayer - 1].sendMessage("$play")
+			self.currentPlayer += 1
 		self.currentPlayer = (self.currentPlayer % 2 ) + 1
+		self.players[self.currentPlayer - 1].sendMessage("$play")
+		
 
 	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
@@ -161,7 +165,7 @@ class Host:
 	def startGame(self):
 		print("Game start")
 		self.hGrid = grid()
-		for p in self.players:
+		for p in self.players:#la partie commence, on affiche les grilles de chaque joueur et on donne la main au 1er joueur
 			p.sendMessage("$gamestart")
 			p.displayGrid()
 		self.switchPlayer()
@@ -301,7 +305,6 @@ def main():
 				if pId != -1:
 					if pId == host.currentPlayer:
 						isMoveOk = host.playMove(int(bytes_recv))
-						host.getPlayer(pId).displayGrid()
 						if isMoveOk:
 							host.switchPlayer()
 				else:
