@@ -36,9 +36,10 @@ class thread_r(threading.Thread):
 						elif word == "$display":
 							i = i + 1
 							word2 = parsed_data[i]
+							# print(word2)
 							grid_str = "-------------\n"
 							for case_i in range(3):
-								grid_str = grid_str + "| " + word2[case_i*3 + 1] + " | " +  word2[case_i*3+1 + 1] + " | " +  word2[case_i*3+2 + 1] + " |\n" + "-------------\n"
+								grid_str = grid_str + "| " + symbols[int(word2[case_i*3 + 1])] + " | " +  symbols[int(word2[case_i*3+1 + 1])] + " | " +  symbols[int(word2[case_i*3+2 + 1])] + " |\n" + "-------------\n"
 							print(grid_str)
 				else:
 					print(data)
