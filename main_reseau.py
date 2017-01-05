@@ -293,7 +293,9 @@ def main():
 
 			if end_winner != EMPTY:
 				winner.sendMessage("$end $win")
+				winner.pClient.score += 1
 				looser.sendMessage("$end $loose")
+				looser.pClient.score += 1
 
 
 			# winner = host.getPlayer(host.isGameOver())
