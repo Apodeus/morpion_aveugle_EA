@@ -44,6 +44,7 @@ class Client:
 	cId = None
 	socket = None
 	score = 0
+	name = "nameless"
 
 	def __init__(self, socket):
 		self.socket = socket
@@ -53,6 +54,9 @@ class Client:
 
 	def sendMessage(self, text):
 		self.socket.send(str.encode(text))
+
+	def setName(self, name):
+		self.name = name
 
 class Player:
 
@@ -71,10 +75,10 @@ class Player:
 		self.pClient.sendMessage(text)
 
 	def getPlayerGrid(self):
-	grid_str = "$display $"
-	for i in range(3):
-		grid_str = grid_str + symbols[self.pGrid.cells[i*3]] +  symbols[self.pGrid.cells[i*3+1]] +  symbols[self.pGrid.cells[i*3+2]] 
-	return grid_str
+		grid_str = "$display $"
+		for i in range(3):
+			grid_str = grid_str + symbols[self.pGrid.cells[i*3]] +  symbols[self.pGrid.cells[i*3+1]] +  symbols[self.pGrid.cells[i*3+2]] 
+		return grid_str
 
 	def displayGrid(self):
 		self.sendMessage(self.getPlayerGrid())
@@ -303,13 +307,23 @@ def main():
 							host.switchPlayer()
 						host.getPlayerId(pId).displayGrid()
 				else:
+					client = host.getClient(cId)
 					if bytes_recv == "play":
 						host.setNewPlayer(host.getClient(cId))
 						if host.isGameReady() == 1:
 							host.startGame()
 						else:
 							print(cId)
-							host.getClient(cId).sendMessage("Waiting opposent...")
+							host.getClient(cId).sendMessage("Waiting for opponent...")
+					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
+						command = bytes_recv.split(':')
+						if command[0] == "name": 			#set client name
+							if client.name == "nameless":
+								print(command[1] + " joined")
+							else:
+								print(client.name + " changed name to " + command[1])
+							client.setName(command[1])
+
 
 
 
