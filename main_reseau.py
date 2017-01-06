@@ -407,7 +407,7 @@ def main_server():
 					host.listSockets.remove(current_socket)
 					current_socket.close()
 
-				if pId != -1:
+				elif pId != -1:
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
 						try:
