@@ -31,16 +31,24 @@ class Player:
 	pGrid = None
 	pClient = None
 	pId = 0
+	pIsIA = 1 # 1 si humain, 0 sinon
 
 	def __init__(self, client):
 		self.pGrid = grid()
 		self.pClient = client
 
+	def playAsIa(self):
+		shot = random.randint(0,8)
+		while(self.pGrid.cells[shot] != EMPTY):
+			shot = random.randint(0,8)
+		return shot
+
 	def setId(self, pid):
 		self.pId = pid
 
 	def sendMessage(self, text):
-		self.pClient.sendMessage(text)
+		if self.pIsIA == 1:
+			self.pClient.sendMessage(text)
 
 	def getPlayerGrid(self):
 		grid_str = self.pGrid.displayStr()
@@ -295,7 +303,7 @@ def main():
 				winner.sendMessage("$end $win")
 				winner.pClient.score += 1
 				looser.sendMessage("$end $loose")
-				looser.pClient.score += 1
+				# looser.pClient.score += 1
 
 
 			# winner = host.getPlayer(host.isGameOver())
@@ -323,10 +331,10 @@ def main():
 							if spec_message == "nameless":
 								spec_message = "Player" + str(host.currentPlayer)
 							spec_message += " played on case " + bytes_recv + "\n"
-							for c in host.listClient:
-								if c.cId != host.players[0].pClient.cId and c.cId != host.players[1].pClient.cId:
-									c.sendMessage(spec_message)
-									c.sendMessage(host.hGrid.displayStr())
+							for client in host.listClient:
+								if client.cId != host.players[0].pClient.cId and client.cId != host.players[1].pClient.cId:
+									client.sendMessage(spec_message)
+									client.sendMessage(host.hGrid.displayStr())
 							host.switchPlayer()
 				else:
 					client = host.getClient(cId)
@@ -337,9 +345,9 @@ def main():
 						else:
 							print(client.name + " is looking for an opponent")
 							host.getClient(cId).sendMessage("Waiting for opponent...")
-							for c in host.listClient:
-								if c.cId != cId:
-									c.sendMessage(client.name + " is looking for an opponent") 
+							for client in host.listClient:
+								if client.cId != cId:
+									client.sendMessage(client.name + " is looking for an opponent") 
 					if bytes_recv == "lead":
 						client.sendMessage(host.getScoresString())
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
