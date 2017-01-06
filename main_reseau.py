@@ -406,7 +406,7 @@ def main_server():
 #_______________________________________FIN MAIN SERVEUR _________________________________________________________________________________
 
 def main_client(ip, port):
-	socket_client = socket(AF_INET6, SOCK_STREAM)
+	socket_client = socket(AF_INET, SOCK_STREAM)
 	socket_client.connect((ip, port))
 	tr = thread_r(socket_client)
 	ts = thread_s(socket_client)
