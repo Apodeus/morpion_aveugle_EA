@@ -416,6 +416,6 @@ def main():
 	else:
 		ip = sys.argv[1]
 		port = 7777
-		main_client()
+		main_client(ip, port)
 
 main()
