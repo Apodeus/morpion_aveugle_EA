@@ -17,6 +17,10 @@ J1 = 1
 J2 = 2
 NB_CELLS=9
 
+
+play_mode = 0;
+expect_answer = 0;
+
 class grid:
     cells = []
     def __init__(self):
