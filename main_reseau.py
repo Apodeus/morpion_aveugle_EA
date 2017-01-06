@@ -17,8 +17,6 @@ J1 = 1
 J2 = 2
 NB_CELLS=9
 
-
-play_mode = 0;
 expect_answer = 0;
 
 class grid:
@@ -92,7 +90,7 @@ class Client:
 	socket = None
 	score = 0
 	name = "nameless"
-	cType = 0 #0 = spec, 1=player
+	cType = 0 #0 = spectator, 1=player
 	cSpec = -1
 
 	def __init__(self, socket):
@@ -114,9 +112,9 @@ class Player:
 	pGrid = None
 	pClient = None
 	pId = 0
-	pIsAI = 0 # 0 si humain, 1 sinon
+	pIsAI = 0 # 0 if human, 1 if IA
 	pGame = -2
-	isWaiting = 0 #0 normal, 1 attends pour reco, -1 a deco
+	isWaiting = 0 #0 normal, 1 waiting for reconnection, -1 has disconnected
 
 	def __init__(self, client):
 		self.pGrid = grid()
@@ -162,12 +160,14 @@ class Host:
 		return self.hGrid[game].gameOver()
 
 	def playMove(self, game, case):	#returns True if ok
-		if self.hGrid[game].cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
+		if not(0 <= case <= 8):
+			return False
+		if self.hGrid[game].cells[case] == EMPTY: #If the case is empty, we can play the move correctly
 			self.hGrid[game].play(self.currentPlayer[game], case)
 			self.players[2 * game + self.currentPlayer[game] - 1].pGrid.play(self.currentPlayer[game], case)
 			self.players[2 * game + self.currentPlayer[game] - 1].displayGrid()
 			return True
-		else: #sinon on met a jour la grille du joueur et on lui redonne la main pour jouer
+		else: #else we can update his grid
 			p = self.players[self.currentPlayer[game] - 1 + 2 * game]
 			p.pGrid.cells[case] = self.hGrid[game].cells[case]
 			p.displayGrid()
@@ -191,11 +191,6 @@ class Host:
 			self.currentPlayer[game] = (self.currentPlayer[game] % 2 ) + 1
 			player = self.players[2 * game + self.currentPlayer[game] - 1]
 			player.sendMessage("$play")
-
-
-
-
-		
 
 	def addNewClient(self):
 		(socket_recv, addr_recv) = self.socketListener.accept()
@@ -263,7 +258,7 @@ class Host:
 		print("Game start")
 		self.hGrid.append(grid())
 		game = len(self.hGrid) - 1
-		for p in self.players:#la partie commence, on affiche les grilles de chaque joueur et on donne la main au 1er joueur
+		for p in self.players:#The game starts, we can display players' grids
 			if p.pGame == -1:
 				p.pGame = game
 				if p.pClient.socket != None:
@@ -295,8 +290,7 @@ class Host:
 					p1 = p
 				else:
 					p2 = p
-		#self.players.remove(p1)
-		#self.players.remove(p2)
+
 		if p1 != None:
 			p1.pClient = None
 		if p2 != None:
@@ -321,29 +315,29 @@ class Host:
 		return name
 
 
-class thread_r(threading.Thread):
+class thread_r(threading.Thread): #Thread for Reception
 	def __init__(self, s):
 		threading.Thread.__init__(self)
 		self.socket_client = s
 
 	def run(self):
 		while(True):
-			data = bytes.decode(self.socket_client.recv(1024) )
+			data = bytes.decode(self.socket_client.recv(1024) ) #data from the server
 			if (len(data) != 0):
 				parsed_data = re.findall('\$[a-zA-Z0-9]+', data)
 				if parsed_data:
 					for i in range(len(parsed_data)):
 						word = parsed_data[i]
+
 						if word == "$gamestart":
 							print("Game started")
 						elif word == "$play":
 							print("Play on a case (0 to 8):")
-							play_mode = 1;
 
 						elif word == "$display":
 							i = i + 1
 							word2 = parsed_data[i]
-							# print(word2)
+							#Displaying the grid
 							grid_str = "-------------\n"
 							for case_i in range(3):
 								grid_str = grid_str + "| " + symbols[int(word2[case_i*3 + 1])] + " | " +  symbols[int(word2[case_i*3+1 + 1])] + " | " +  symbols[int(word2[case_i*3+2 + 1])] + " |\n" + "-------------\n"
@@ -351,7 +345,6 @@ class thread_r(threading.Thread):
 
 						elif word == "$end":
 							i += 1
-							play_mode = 0
 							word2 = parsed_data[i]
 							if word2 == "$win":
 								print("You win")
@@ -363,7 +356,7 @@ class thread_r(threading.Thread):
 				else:
 					print(data)
 
-class thread_s(threading.Thread):
+class thread_s(threading.Thread):#Thread for Emission
 	def __init__(self, s):
 		threading.Thread.__init__(self)
 		self.socket_client = s
@@ -372,13 +365,10 @@ class thread_s(threading.Thread):
 		while True:
 			text = input("")
 			if text == "help":
-				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID> \n playAI \t Start a game against the AI\n join:<name>\t Join an unfinished game against <name>\n quit\t\t Cancel a game")
-			elif play_mode == 1:
-				self.socket_client.send(str.encode(text))
-			else:
-				self.socket_client.send(str.encode(text))
+				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID> \n playAI \t Start a game against the AI\n join:<name>\t Join an unfinished game against <name>\n quit\t\t Cancel a game")	
+			self.socket_client.send(str.encode(text))
 
-#_________________________FIN DES CLASSES____________________________________________________________________________
+#_________________________END OF CLASS DECLARATION ____________________________________________________________________________
 
 def main_server():
 	socket_listen = socket(AF_INET, SOCK_STREAM, 0)
@@ -386,12 +376,12 @@ def main_server():
 	socket_listen.bind((gethostbyname(gethostname()), 7777))
 	socket_listen.listen(1)
 
-	print("Servers up at ( hostname = " + gethostname()+ " )"+gethostbyname(gethostname()) + "\n You can connect using either of those as argument for the client.")
+	print("Server is up at ( hostname = " + gethostname()+ " )"+gethostbyname(gethostname()) + "\n You can connect using either of those as argument for the client.")
 	host = Host(socket_listen)
 
 	while(1):
 		for g in range(len(host.hGrid)):
-			if (host.isGameOver(g) != -1): #Si la partie est fini
+			if (host.isGameOver(g) != -1): #if gameOver
 				player1 = None
 				player2 = None
 				for player in host.players:
@@ -406,40 +396,35 @@ def main_server():
 					for c in host.listClient:
 						if c.cId != cId and c.cType != 1:
 							c.sendMessage(player1.pClient.name + " and " + player2.pClient.name + " ended their game on a draw.")
-				if end_winner == J1:#J1 a gagné
+
+				if end_winner == J1:#player1 win
 					player1.sendMessage(host.hGrid[g].displayStr() + " $end $win")
 					player2.sendMessage(host.hGrid[g].displayStr() + " $end $loose")
 					for c in host.listClient:
 						if c.cId != cId and c.cType != 1:
 							c.sendMessage(player1.pClient.name + " won against " + player2.pClient.name + ".")
 					player1.pClient.score += 1
-				if end_winner == J2:#J2 a gagné
+
+				if end_winner == J2:#player2 win
 					player2.sendMessage(host.hGrid[g].displayStr() + " $end $win")
 					player1.sendMessage(host.hGrid[g].displayStr() + " $end $loose")
 					for c in host.listClient:
 						if c.cId != cId and c.cType != 1:
 							c.sendMessage(player2.pClient.name + " won against " + player1.pClient.name + ".")
 					player2.pClient.score += 1
-				# looser.pClient.score += 1
 
-
-				# winner = host.getPlayer(host.isGameOver())
-				# winner.sendMessage("$end $win")
-				# winner.pClient.score += 1
-				# looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
-				# looser.sendMessage("$end $loose")
 				host.endGame(g)
 
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
-			if current_socket == host.socketListener: #Connexion d'un nouveau client
+			if current_socket == host.socketListener: #Connexion of a new client
 				host.addNewClient()
 				print("A new client connected")
 			else:
 				cId = host.getClientId(current_socket)
 				pId = host.getPlayerId(current_socket)
 				bytes_recv = bytes.decode(current_socket.recv(1024))
-				if len(bytes_recv) == 0 :#DECONNEXION D UN CLIENT
+				if len(bytes_recv) == 0 :#DECONNEXION of a client
 					client = host.getClient(host.getClientId(current_socket))
 					for c in host.listClient:
 						if c.cType != 1 and c.cId != client.cId:
@@ -470,13 +455,12 @@ def main_server():
 							p2.sendMessage(log)
 						host.endGame(player.pGame)
 					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
-						try:
+						try: #try to convert the message in an integer
 							isMoveOk = host.playMove(player.pGame, int(bytes_recv))
 						except ValueError:
 							isMoveOk = False
 							
-						# isMoveOk = host.playMove(player.pGame, int(bytes_recv))
-						if isMoveOk: #Si l'action s'est bien déroulé
+						if isMoveOk: #if the move is good
 							for c in host.listClient:
 								if c.cType != 1 and c.cSpec == player.pGame:
 									c.sendMessage(host.hGrid[player.pGame].displayStr())
@@ -543,9 +527,9 @@ def main_server():
 
 
 
-#_______________________________________FIN MAIN SERVEUR _________________________________________________________________________________
+#_______________________________________END MAIN_SERVEUR _________________________________________________________________________________
 
-def main_client(ip, port):
+def main_client(ip, port):#Creating two threads, one for emission, one for reception
 	socket_client = socket(AF_INET, SOCK_STREAM)
 	socket_client.connect((ip, port))
 	tr = thread_r(socket_client)
@@ -554,7 +538,7 @@ def main_client(ip, port):
 	tr.start()
 	ts.start()
 
-def main():
+def main():#If there is no argument, we start the server, else we start as a client
 	argv = sys.argv
 	if len(argv) == 1:
 		main_server()
