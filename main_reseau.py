@@ -377,10 +377,15 @@ def main_server():
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
 				host.addNewClient()
 				print("A new client connected")
-			else: 
+			else:
 				cId = host.getClientId(current_socket)
 				pId = host.getPlayerId(current_socket)
 				bytes_recv = bytes.decode(current_socket.recv(1024))
+				if len(bytes_recv) == 0 :#DECONNEXION D UN CLIENT
+					host.listClient.remove(host.getClient(host.getClientId(current_socket)))
+					host.listSockets.remove(current_socket)
+					current_socket.close()
+
 				if pId != -1:
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
