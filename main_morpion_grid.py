@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from socket import *
-from grid import *
 
 import select
 import threading
@@ -8,8 +7,6 @@ import random
 
 import sys
 import re
-
-
 
 symbols = [' ', 'O', 'X']
 EMPTY = 0
