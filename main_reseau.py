@@ -330,7 +330,9 @@ class thread_s(threading.Thread):
 	def run(self):
 		while True:
 			text = input("")
-			if play_mode == 1:
+			if text == "help":
+				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID>")
+			elif play_mode == 1:
 				self.socket_client.send(str.encode(str(int(text))))
 			else:
 				self.socket_client.send(str.encode(text))
