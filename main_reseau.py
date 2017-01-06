@@ -411,7 +411,7 @@ def main_client(ip, port):
 
 def main():
 	argv = sys.argv
-	if len(argv) == 0:
+	if len(argv) == 1:
 		main_server()
 	else:
 		ip = sys.argv[1]
