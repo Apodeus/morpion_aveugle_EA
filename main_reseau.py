@@ -97,7 +97,8 @@ class Client:
 
 	def __init__(self, socket):
 		self.socket = socket
-		self.sendMessage("Connected.\ntype 'help' to display available commands.\n")
+		if socket != None:
+			self.sendMessage("Connected.\ntype 'help' to display available commands.\n")
 
 	def setId(self, cid):
 		self.cId = cid
@@ -113,7 +114,7 @@ class Player:
 	pGrid = None
 	pClient = None
 	pId = 0
-	pIsIA = 1 # 1 si humain, 0 sinon
+	pIsAI = 0 # 0 si humain, 1 sinon
 	pGame = -2
 	isWaiting = 0 #0 normal, 1 attends pour reco, -1 a deco
 
@@ -131,12 +132,11 @@ class Player:
 		self.pId = pid
 
 	def sendMessage(self, text):
-		if self.pIsIA == 1:
+		if self.pIsAI == 0:
 			self.pClient.sendMessage(text)
 
 	def getPlayerGrid(self):
 		grid_str = self.pGrid.displayStr()
-		print(grid_str)
 		return grid_str
 
 	def displayGrid(self):
@@ -168,7 +168,7 @@ class Host:
 			self.players[2 * game + self.currentPlayer[game] - 1].displayGrid()
 			return True
 		else: #sinon on met a jour la grille du joueur et on lui redonne la main pour jouer
-			p = self.players[self.currentPlayer[game] - 1]
+			p = self.players[self.currentPlayer[game] - 1 + 2 * game]
 			p.pGrid.cells[case] = self.hGrid[game].cells[case]
 			p.displayGrid()
 			p.sendMessage("$play")
@@ -178,7 +178,23 @@ class Host:
 		if self.currentPlayer[game] == -1:
 			self.currentPlayer[game] += 1
 		self.currentPlayer[game] = (self.currentPlayer[game] % 2 ) + 1
-		self.players[2 * game + self.currentPlayer[game] - 1].sendMessage("$play")
+		player = self.players[2 * game + self.currentPlayer[game] - 1]
+		if player.pIsAI == 0:
+			player.sendMessage("$play")
+		else:
+			correct = False
+			while correct == False:
+				correct = self.playMove(game, player.playAsIa())
+			for c in self.listClient:
+				if c.cType != 1 and c.cSpec == player.pGame:
+					c.sendMessage(self.hGrid[player.pGame].displayStr())
+			self.currentPlayer[game] = (self.currentPlayer[game] % 2 ) + 1
+			player = self.players[2 * game + self.currentPlayer[game] - 1]
+			player.sendMessage("$play")
+
+
+
+
 		
 
 	def addNewClient(self):
@@ -195,6 +211,17 @@ class Host:
 		p.pGame = -1
 		client.cType = 1
 		client.cSpec = -1
+
+	def setNewAIPlayer(self):
+		client = Client(None)
+		client.name = "AI"
+		p = Player(client)
+		self.players.append(p)
+		p.setId(len(self.players))
+		p.pGame = -1
+		client.cType = 2
+		client.cSpec = -1
+		p.pIsAI = 1
 
 	def getPlayerId(self, socket):
 		for p in self.players:
@@ -232,8 +259,9 @@ class Host:
 		for p in self.players:#la partie commence, on affiche les grilles de chaque joueur et on donne la main au 1er joueur
 			if p.pGame == -1:
 				p.pGame = game
-				p.sendMessage("$gamestart")
-				p.displayGrid()
+				if p.pClient.socket != None:
+					p.sendMessage("$gamestart")
+					p.displayGrid()
 		self.currentPlayer.append(-1)
 		self.switchPlayer(game)
 
@@ -245,7 +273,8 @@ class Host:
 		l = self.getScores()
 		s = ""
 		for i in range(len(l)):
-			s += str(i + 1) + ":" + l[i].name + " with " + str(l[i].score) + " wins\n"
+			if l[i].cType != 2:
+				s += str(i + 1) + ":" + l[i].name + " with " + str(l[i].score) + " wins\n"
 		return s
 
 	def endGame(self, game):
@@ -366,14 +395,23 @@ def main_server():
 							player2 = player
 				end_winner = host.isGameOver(g)
 				if end_winner == EMPTY:#draw
-					player.sendMessage("$end $draw")
+					player.sendMessage(host.hGrid[g].displayStr() + " $end $draw")
+					for c in host.listClient:
+						if c.cId != cId and c.cType != 1:
+							c.sendMessage(player1.pClient.name + " and " + player2.pClient.name + " ended their game on a draw.")
 				if end_winner == J1:#J1 a gagné
-					player1.sendMessage("$end $win")
-					player2.sendMessage("$end $loose")
+					player1.sendMessage(host.hGrid[g].displayStr() + " $end $win")
+					player2.sendMessage(host.hGrid[g].displayStr() + " $end $loose")
+					for c in host.listClient:
+						if c.cId != cId and c.cType != 1:
+							c.sendMessage(player1.pClient.name + " won against " + player2.pClient.name + ".")
 					player1.pClient.score += 1
 				if end_winner == J2:#J2 a gagné
-					player2.sendMessage("$end $win")
-					player1.sendMessage("$end $loose")
+					player2.sendMessage(host.hGrid[g].displayStr() + " $end $win")
+					player1.sendMessage(host.hGrid[g].displayStr() + " $end $loose")
+					for c in host.listClient:
+						if c.cId != cId and c.cType != 1:
+							c.sendMessage(player2.pClient.name + " won against " + player1.pClient.name + ".")
 					player2.pClient.score += 1
 				# looser.pClient.score += 1
 
@@ -432,13 +470,8 @@ def main_server():
 							
 						# isMoveOk = host.playMove(player.pGame, int(bytes_recv))
 						if isMoveOk: #Si l'action s'est bien déroulé
-							spec_message = player.pClient.name
-							if spec_message == "nameless":
-								spec_message = "Player" + str(host.currentPlayer[player.pGame])
-							spec_message += " played on case " + bytes_recv + "\n"
 							for c in host.listClient:
 								if c.cType != 1 and c.cSpec == player.pGame:
-									c.sendMessage(spec_message)
 									c.sendMessage(host.hGrid[player.pGame].displayStr())
 							host.switchPlayer(player.pGame)
 				else:
@@ -457,7 +490,17 @@ def main_server():
 							host.getClient(cId).sendMessage("Waiting for opponent...")
 							for c in host.listClient:
 								if c.cId != cId and c.cType != 1:
-									c.sendMessage(client.name + " is looking for an opponent") 
+									c.sendMessage(client.name + " is looking for an opponent")
+					if bytes_recv == "playAI":
+						host.setNewPlayer(host.getClient(cId))
+						host.setNewAIPlayer()
+						if host.isGameReady() == 1:
+							host.startGame()
+							idGame = len(host.hGrid) - 1
+							(p1, p2) = host.getPlayers(idGame)
+							for c in host.listClient:
+								if c.cType != 1 :
+									c.sendMessage("A game started between " + p1.pClient.name + " and the AI (ID:" + str(idGame) + ")")
 					if bytes_recv == "lead":
 						client.sendMessage(host.getScoresString())
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
