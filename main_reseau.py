@@ -97,7 +97,7 @@ class Client:
 
 	def __init__(self, socket):
 		self.socket = socket
-		self.sendMessage("Connexion réussie avec le serveur.\nTaper \"play\" pour jouer.\n")
+		self.sendMessage("Connected.\ntype 'help' to display available commands.\n")
 
 	def setId(self, cid):
 		self.cId = cid
