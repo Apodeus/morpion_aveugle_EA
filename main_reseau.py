@@ -6,6 +6,75 @@ import select
 import threading
 import random
 
+import sys
+import re
+
+
+
+symbols = [' ', 'O', 'X']
+EMPTY = 0
+J1 = 1
+J2 = 2
+NB_CELLS=9
+
+class grid:
+    cells = []
+    def __init__(self):
+        self.cells = []
+        for i in range(NB_CELLS):
+            self.cells.append(EMPTY)
+
+    def play(self, player, cellNum):
+        assert(0<= cellNum and cellNum < NB_CELLS)
+        assert(self.cells[cellNum] == EMPTY)
+        self.cells[cellNum] = player
+
+    """ Display the state of the game
+        Example of output : 
+        -------
+        |O| |X|
+        -------
+        |X|O| |
+        -------
+        | | |O| 
+        -------
+    """
+    def display(self):
+        print("-------------")
+        for i in range(3):
+            print("|",symbols[self.cells[i*3]], "|",  symbols[self.cells[i*3+1]], "|",  symbols[self.cells[i*3+2]], "|");
+            print("-------------")
+
+    """ Test if 'player' wins the game"""
+    def winner(self, player):
+        assert(player==J1 or player==J2)
+        # horizontal line
+        for y in range(3): 
+            if self.cells[y*3] == player and self.cells[y*3+1] == player and self.cells[y*3+2] == player:
+                    return True
+        # vertical line
+        for x in range(3): 
+            if self.cells[x] == player and self.cells[3+x] == player and self.cells[6+x] == player:
+                    return True
+        #diagonals :
+        if self.cells[0] == player and self.cells[4] == player and self.cells[8] == player:
+            return True
+        if self.cells[2] == player and self.cells[4] == player and self.cells[6] == player:
+            return True
+        return False
+    
+    """ Return the state of the game: -1 if the game is not over, EMPTY if DRAW; J1 if player 1 wins and J2 if player 2 wins.
+    """
+    def gameOver(self):
+        if self.winner(J1):
+            return J1
+        if self.winner(J2):
+            return J2
+        for i in range(NB_CELLS):
+            if(self.cells[i] == EMPTY):
+                return -1
+        return 0
+
 
 class Client:
 
@@ -183,7 +252,66 @@ class Host:
 		p2.pClient = None
 		self.hGrid[game] = grid()
 
-def main():
+
+class thread_r(threading.Thread):
+	def __init__(self, s):
+		threading.Thread.__init__(self)
+		self.socket_client = s
+
+	def run(self):
+		while(True):
+			data = bytes.decode(self.socket_client.recv(1024) )
+			if (len(data) != 0):
+				parsed_data = re.findall('\$[a-zA-Z0-9]+', data)
+				print(parsed_data)
+				if parsed_data:
+					for i in range(len(parsed_data)):
+						word = parsed_data[i]
+						if word == "$gamestart":
+							print("Début de la partie")
+						elif word == "$play":
+							print("Quelle case allez vous jouer ? (0-8)")
+							play_mode = 1;
+
+						elif word == "$display":
+							i = i + 1
+							word2 = parsed_data[i]
+							# print(word2)
+							grid_str = "-------------\n"
+							for case_i in range(3):
+								grid_str = grid_str + "| " + symbols[int(word2[case_i*3 + 1])] + " | " +  symbols[int(word2[case_i*3+1 + 1])] + " | " +  symbols[int(word2[case_i*3+2 + 1])] + " |\n" + "-------------\n"
+							print(grid_str)
+
+						elif word == "$end":
+							i += 1
+							play_mode = 0
+							word2 = parsed_data[i]
+							if word2 == "$win":
+								print("You win")
+							elif word2 == "$loose":
+								print("You loose")
+							elif word2 == "$draw":
+								print("Draw !")
+
+				else:
+					print(data)
+
+class thread_s(threading.Thread):
+	def __init__(self, s):
+		threading.Thread.__init__(self)
+		self.socket_client = s
+
+	def run(self):
+		while True:
+			text = input("")
+			if play_mode == 1:
+				self.socket_client.send(str.encode(str(int(text))))
+			else:
+				self.socket_client.send(str.encode(text))
+
+#_________________________FIN DES CLASSES____________________________________________________________________________
+
+def main_server():
 	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
 	socket_listen.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 	socket_listen.bind(('', 7777))
@@ -270,6 +398,24 @@ def main():
 								print(client.name + " changed name to " + command[1])
 							client.setName(command[1])
 
+#_______________________________________FIN MAIN SERVEUR _________________________________________________________________________________
 
+def main_client(ip, port):
+	socket_client = socket(AF_INET6, SOCK_STREAM)
+	socket_client.connect((ip, port))
+	tr = thread_r(socket_client)
+	ts = thread_s(socket_client)
+
+	tr.start()
+	ts.start()
+
+def main():
+	argv = sys.argv
+	if len(argv) == 0:
+		main_server()
+	else:
+		ip = sys.argv[1]
+		port = 7777
+		main_client()
 
 main()
