@@ -273,6 +273,12 @@ class Host:
 					p2 = p
 		return (p1, p2)
 
+	def checkForFreeName(self, name):
+		for c in self.listClient:
+			if c.name == name:
+				return self.checkForFreeName(name + "_")
+		return name
+
 
 class thread_r(threading.Thread):
 	def __init__(self, s):
@@ -423,11 +429,17 @@ def main_server():
 						command = bytes_recv.split(':')
 						if len(command) == 2:
 							if command[0] == "name": 			#set client name
+								log = ""
+								command[1] = host.checkForFreeName(command[1])
 								if client.name == "nameless":
-									print(command[1] + " joined")
+									log = command[1] + " joined"
 								else:
-									print(client.name + " changed name to " + command[1])
+									log = client.name + " changed name to " + command[1]
 								client.setName(command[1])
+								print(log)
+								for c in host.listClient:
+									if c.cType != 1 and c.cId != client.cId:
+										c.sendMessage(log)
 							if command[0] == "spec":			#spectate a game
 								g = int(command[1])
 								client.cSpec = g
