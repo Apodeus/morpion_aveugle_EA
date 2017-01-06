@@ -24,6 +24,7 @@ class thread_r(threading.Thread):
 			data = bytes.decode(self.socket_client.recv(1024) )
 			if (len(data) != 0):
 				parsed_data = re.findall('\$[a-zA-Z0-9]+', data)
+				print(parsed_data)
 				if parsed_data:
 					for i in range(len(parsed_data)):
 						word = parsed_data[i]

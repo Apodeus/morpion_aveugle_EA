@@ -13,6 +13,7 @@ class Client:
 	socket = None
 	score = 0
 	name = "nameless"
+	cType = 0 #0 = spec, 1=player
 
 	def __init__(self, socket):
 		self.socket = socket
@@ -32,6 +33,7 @@ class Player:
 	pClient = None
 	pId = 0
 	pIsIA = 1 # 1 si humain, 0 sinon
+	pGame = -2
 
 	def __init__(self, client):
 		self.pGrid = grid()
@@ -63,39 +65,40 @@ class Host:
 	listClient = []
 	listSockets = []
 	socketListener = None
-	currentPlayer = -1
-	hGrid = None
+	currentPlayer = []
+	hGrid = []
 	players = []
 	specs = []
 
 	def __init__(self, socketListener):
 		self.socketListener = socketListener
-		self.hGrid = grid()
 		self.listSockets.append(socketListener)
 
-	def isGameOver(self):
-		if self.hGrid.gameOver() != -1 :
-			self.currentPlayer = -1
-		return self.hGrid.gameOver()
+	def isGameOver(self, game):
+		if self.hGrid[game].gameOver() != -1 :
+			self.currentPlayer[game] = -1
+		return self.hGrid[game].gameOver()
 
-	def playMove(self, case):	#returns True if ok
-		if self.hGrid.cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
-			self.hGrid.play(self.currentPlayer, case)
-			self.players[self.currentPlayer - 1].pGrid.play(self.currentPlayer, case)
-			self.players[self.currentPlayer - 1].displayGrid()
+	def playMove(self, game, case):	#returns True if ok
+		print("game:" + str(game))
+		print("case:" + str(case))
+		if self.hGrid[game].cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
+			self.hGrid[game].play(self.currentPlayer[game], case)
+			self.players[2 * game + self.currentPlayer[game] - 1].pGrid.play(self.currentPlayer[game], case)
+			self.players[2 * game + self.currentPlayer[game] - 1].displayGrid()
 			return True
 		else: #sinon on met a jour la grille du joueur et on lui redonne la main pour jouer
-			p = self.players[self.currentPlayer - 1]
-			p.pGrid.cells[case] = self.hGrid.cells[case]
+			p = self.players[self.currentPlayer[game] - 1]
+			p.pGrid.cells[case] = self.hGrid[game].cells[case]
 			p.displayGrid()
 			p.sendMessage("$play")
 			return False
 
-	def switchPlayer(self):
-		if self.currentPlayer == -1:
-			self.currentPlayer += 1
-		self.currentPlayer = (self.currentPlayer % 2 ) + 1
-		self.players[self.currentPlayer - 1].sendMessage("$play")
+	def switchPlayer(self, game):
+		if self.currentPlayer[game] == -1:
+			self.currentPlayer[game] += 1
+		self.currentPlayer[game] = (self.currentPlayer[game] % 2 ) + 1
+		self.players[2 * game + self.currentPlayer[game] - 1].sendMessage("$play")
 		
 
 	def addNewClient(self):
@@ -106,16 +109,15 @@ class Host:
 		c.setId(len(self.listClient))
 
 	def setNewPlayer(self, client):
-		if len(self.players) <= 1:
-			p = Player(client)
-			self.players.append(p)
-			p.setId(len(self.players))
-		else:
-			return
+		p = Player(client)
+		self.players.append(p)
+		p.setId(len(self.players))
+		p.pGame = -1
+		client.cType = 1
 
 	def getPlayerId(self, socket):
 		for p in self.players:
-			if socket == p.pClient.socket:
+			if p.pClient != None and socket == p.pClient.socket:
 				return p.pId
 		return -1
 
@@ -138,17 +140,21 @@ class Host:
 		return -1
 
 	def isGameReady(self):
-		if len(self.players) == 2:
+		if len(self.players) > 1 and len(self.players)%2 == 0:
 			return 1
 		return 0
 
-	def startGame(self):
+	def startGame(self):	####################	
 		print("Game start")
-		self.hGrid = grid()
+		self.hGrid.append(grid())
+		game = len(self.hGrid) - 1
 		for p in self.players:#la partie commence, on affiche les grilles de chaque joueur et on donne la main au 1er joueur
-			p.sendMessage("$gamestart")
-			p.displayGrid()
-		self.switchPlayer()
+			if p.pGame == -1:
+				p.pGame = game
+				p.sendMessage("$gamestart")
+				p.displayGrid()
+		self.currentPlayer.append(-1)
+		self.switchPlayer(game)
 
 	def getScores(self):
 		l = sorted(self.listClient, key=lambda x: x.score, reverse=True)
@@ -161,120 +167,21 @@ class Host:
 			s += str(i + 1) + ":" + l[i].name + " with " + str(l[i].score) + " wins\n"
 		return s
 
-	def endGame(self):
-		self.players.remove(self.getPlayer(1))
-		self.players.remove(self.getPlayer(2))
-		self.hGrid = grid()
-
-
-
-def printGridPlayer(socket, str_grid):
-	socket.send(str.encode(str_grid))
-
-def sendBegin(socket_j1, socket_j2):
-	# print(current_player)
-	global current_player
-	if(socket_j1 == None or socket_j2 == None):
-		return
-	if(current_player == J1):
-		socket_j1.send(str.encode("begin"))
-	else:
-		socket_j2.send(str.encode("begin"))
-
-def playMove(bytes_recv, socket_player):
-	global current_player 
-	global grids 
-	shot = int(bytes.decode(bytes_recv))
-	if grids[0].cells[shot] != EMPTY: # Si la case est déjà prise alors on réactualise la grille du joueur et on la reaffiche
-		grids[current_player].cells[shot] = grids[0].cells[shot]
-		socket_player.send(str.encode( grids[current_player].displayStr() ))
-		# sendBegin(socket_j1, socket_j2)
-	else: #Sinon le coup est joué, on actualise les grilles et on réaffiche celle du joueur
-		grids[current_player].cells[shot] = current_player
-		grids[0].play(current_player, shot)
-		socket_player.send(str.encode( grids[current_player].displayStr() ))
-		current_player = current_player%2 + 1
-		# sendBegin(socket_j1, socket_j2)
-	print("c'est au tour du joueur " + str(current_player) )
-
-def main_old():
-	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
-	socket_listen.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-	socket_listen.bind(('', 7777))
-	socket_listen.listen(1)
-	global socket_j1, socket_j2
-	socket_j1 = None
-	socket_j2 = None
-	list_clients = []
-	list_clients.append(socket_listen)
-
-	global current_player 
-	global grids 
-	current_player = J1
-	grids = [grid(), grid(), grid()]
-
-	while(grids[0].gameOver() == -1):
-		(ready_sockets, [], []) = select.select(list_clients, [], [])
-		for i in range(len(ready_sockets)):
-			if ready_sockets[i] == socket_listen: # Connexion d'un client
-				if socket_j1 == None or socket_j2 == None:
-					(socket_recv, addr_recv) = socket_listen.accept()
-					print("Connexion en cours avec un client...")
-
-					if socket_j1 == None:
-						print("joueur1 est connecté ..")
-						socket_j1 = socket_recv
-						list_clients.append(socket_recv)
-						socket_j1.send(str.encode(grids[J1].displayStr() ))
-
-					elif socket_j2 == None:
-						print("joueur2 est connecté ..")
-						socket_j2 = socket_recv
-						list_clients.append(socket_recv)
-						socket_j2.send(str.encode(grids[J2].displayStr() ))
-						sendBegin(socket_j1, socket_j2)#Le joueur 2 a rejoint, on peut lancer le début
-
+	def endGame(self, game):
+		p1 = None
+		p2 = None
+		for p in self.players:
+			if p.pGame == game:
+				p.pClient.cType = 0
+				if p1 == None:
+					p1 = p
 				else:
-					socket_recv.send(str.encode("Server is full."))
-
-			elif socket_j1 != None and socket_j2 != None : #Reception d'un message d'une socket joueur
-
-				bytes_recv = ready_sockets[i].recv(1024) 
-				# print(current_player)
-				if len(bytes_recv) == 0: #Deconnexion
-					list_clients.remove(ready_sockets[i])
-					ready_sockets[i].close()
-				elif ready_sockets[i] == socket_j1 and current_player == J1 : #Si c'est au joueur1
-					playMove(bytes_recv, socket_j1) #on joue le move
-
-				elif ready_sockets[i] == socket_j2 and current_player == J2 : #si c'est au j2
-					playMove(bytes_recv, socket_j2) # on joue le move
-
-				else:
-					print("something's wrong ...")
-
-				sendBegin(socket_j1, socket_j2)
-	#FIN DE PARTIE / ANNONCE DES SCORES
-	socket_j1.send(str.encode("GAME OVER !"))
-	socket_j2.send(str.encode("GAME OVER !"))
-
-	socket_j1.send(str.encode( grids[0].displayStr() ))
-	socket_j2.send(str.encode( grids[0].displayStr() ))
-
-	if grids[0].gameOver() == J1:
-		socket_j1.send(str.encode( "YOU WIN !" ))
-		socket_j2.send(str.encode( "YOU LOOSE !" ))
-
-	elif grids[0].gameOver() == J2:
-		socket_j2.send(str.encode( "YOU WIN !" ))
-		socket_j1.send(str.encode( "YOU LOOSE !" ))
-	else:
-		socket_j1.send(str.encode("EGALITY"))
-		socket_j2.send(str.encode("EGALITY"))
-
-	socket_j1.close()
-	socket_j2.close()
-
+					p2 = p
+		#self.players.remove(p1)
+		#self.players.remove(p2)
+		p1.pClient = None
+		p2.pClient = None
+		self.hGrid[game] = grid()
 
 def main():
 	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
@@ -285,33 +192,36 @@ def main():
 	host = Host(socket_listen)
 
 	while(1):
-		
-		if (host.isGameOver() != -1): #Si la partie est fini
-			end_winner = host.isGameOver()
-			if end_winner == EMPTY:#draw
+		for g in range(len(host.hGrid)):
+			if (host.isGameOver(g) != -1): #Si la partie est fini
+				player1 = None
+				player2 = None
 				for player in host.players:
+					if (player.pGame == g):
+						if player1 == None:
+							player1 = player
+						else:
+							player2 = player
+				end_winner = host.isGameOver(g)
+				if end_winner == EMPTY:#draw
 					player.sendMessage("$end $draw")
-			elif end_winner == J1:#J1 a gagné
-				looser = host.getPlayer(J2)
-				winner = host.getPlayer(J1)
-
-			elif end_winner == J2:#J2 a gagné
-				looser = host.getPlayer(J1)
-				winner = host.getPlayer(J2)
-				
-			if end_winner != EMPTY :
-				winner.sendMessage("$end $win")
-				winner.pClient.score += 1
-				looser.sendMessage("$end $loose")
+				if end_winner == J1:#J1 a gagné
+					player1.sendMessage("$end $win")
+					player2.sendMessage("$end $loose")
+					player1.pClient.score += 1
+				if end_winner == J2:#J2 a gagné
+					player2.sendMessage("$end $win")
+					player1.sendMessage("$end $loose")
+					player2.pClient.score += 1
 				# looser.pClient.score += 1
 
 
-			# winner = host.getPlayer(host.isGameOver())
-			# winner.sendMessage("$end $win")
-			# winner.pClient.score += 1
-			# looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
-			# looser.sendMessage("$end $loose")
-			host.endGame()
+				# winner = host.getPlayer(host.isGameOver())
+				# winner.sendMessage("$end $win")
+				# winner.pClient.score += 1
+				# looser = host.getPlayer((host.isGameOver() % 2 )+ 1)
+				# looser.sendMessage("$end $loose")
+				host.endGame(g)
 
 		(ready_sockets, [], []) = select.select(host.listSockets, [], [])
 		for current_socket in ready_sockets:
@@ -324,18 +234,19 @@ def main():
 				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if pId != -1:
 					player = host.getPlayer(pId)
-					if pId == host.currentPlayer:
-						isMoveOk = host.playMove(int(bytes_recv))
+					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
+						isMoveOk = host.playMove(player.pGame, int(bytes_recv))
 						if isMoveOk: #Si l'action s'est bien déroulé
 							spec_message = player.pClient.name
 							if spec_message == "nameless":
-								spec_message = "Player" + str(host.currentPlayer)
+								spec_message = "Player" + str(host.currentPlayer[player.pGame])
 							spec_message += " played on case " + bytes_recv + "\n"
 							for client in host.listClient:
-								if client.cId != host.players[0].pClient.cId and client.cId != host.players[1].pClient.cId:
+								if client.cType != 1:
 									client.sendMessage(spec_message)
-									client.sendMessage(host.hGrid.displayStr())
-							host.switchPlayer()
+									print("data:" + host.hGrid[player.pGame].displayStr())
+									client.sendMessage(host.hGrid[player.pGame].displayStr())
+							host.switchPlayer(player.pGame)
 				else:
 					client = host.getClient(cId)
 					if bytes_recv == "play":
@@ -345,9 +256,9 @@ def main():
 						else:
 							print(client.name + " is looking for an opponent")
 							host.getClient(cId).sendMessage("Waiting for opponent...")
-							for client in host.listClient:
-								if client.cId != cId:
-									client.sendMessage(client.name + " is looking for an opponent") 
+							for c in host.listClient:
+								if c.cId != cId and c.cType != 1:
+									c.sendMessage(client.name + " is looking for an opponent") 
 					if bytes_recv == "lead":
 						client.sendMessage(host.getScoresString())
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
