@@ -202,7 +202,7 @@ class Host:
 		c = Client(socket_recv)
 		self.listClient.append(c)
 		self.listSockets.append(socket_recv)
-		c.setId(len(self.listClient))
+		c.setId(self.getNewClientId())
 
 	def setNewPlayer(self, client):
 		p = Player(client)
@@ -246,6 +246,13 @@ class Host:
 			if cid == c.cId:
 				return c
 		return -1
+
+	def getNewClientId(self):
+		i = 0
+		for c in self.listClient:
+			if c.cId != None and c.cId > i:
+				i = c.cId
+		return i + 1
 
 	def isGameReady(self):
 		if len(self.players) > 1 and len(self.players)%2 == 0:
@@ -328,9 +335,9 @@ class thread_r(threading.Thread):
 					for i in range(len(parsed_data)):
 						word = parsed_data[i]
 						if word == "$gamestart":
-							print("Début de la partie")
+							print("Game started")
 						elif word == "$play":
-							print("Quelle case allez vous jouer ? (0-8)")
+							print("Play on a case (0 to 8):")
 							play_mode = 1;
 
 						elif word == "$display":
@@ -365,7 +372,7 @@ class thread_s(threading.Thread):
 		while True:
 			text = input("")
 			if text == "help":
-				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID>")
+				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID> \n playAI \t Start a game against the AI\n join:<name>\t Join an unfinished game against <name>\n quit\t\t Cancel a game")
 			elif play_mode == 1:
 				self.socket_client.send(str.encode(text))
 			else:
