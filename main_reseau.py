@@ -316,11 +316,12 @@ class thread_s(threading.Thread):
 #_________________________FIN DES CLASSES____________________________________________________________________________
 
 def main_server():
-	socket_listen = socket(AF_INET6, SOCK_STREAM, 0)
+	socket_listen = socket(AF_INET, SOCK_STREAM, 0)
 	socket_listen.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-	socket_listen.bind(('', 7777))
+	socket_listen.bind((gethostbyname(gethostname()), 7777))
 	socket_listen.listen(1)
 
+	print("Servers up at ( hostname = " + gethostname()+ " )"+gethostbyname(gethostname()) + "\n You can connect using either of those as argument for the client.")
 	host = Host(socket_listen)
 
 	while(1):
