@@ -115,6 +115,7 @@ class Player:
 	pId = 0
 	pIsIA = 1 # 1 si humain, 0 sinon
 	pGame = -2
+	isWaiting = 0 #0 normal, 1 attends pour reco, -1 a deco
 
 	def __init__(self, client):
 		self.pGrid = grid()
@@ -391,7 +392,18 @@ def main_server():
 				pId = host.getPlayerId(current_socket)
 				bytes_recv = bytes.decode(current_socket.recv(1024))
 				if len(bytes_recv) == 0 :#DECONNEXION D UN CLIENT
-					host.listClient.remove(host.getClient(host.getClientId(current_socket)))
+					client = host.getClient(host.getClientId(current_socket))
+					for c in host.listClient:
+						if c.cType != 1 and c.cId != client.cId:
+							c.sendMessage(client.name + " disconnected.")
+					if client.cType == 1:
+						player = host.getPlayer(host.getPlayerId(current_socket))
+						player.isWaiting = -1
+					for p in host.players:
+						if p.pGame == player.pGame and p.pId != player.pId and p.pClient != None:
+							p.sendMessage("Your opponent " + client.name + " has disconnected. You can wait for him to reconnect or quit by typing 'quit'.")
+							p.isWaiting = 1
+					host.listClient.remove(client)
 					host.listSockets.remove(current_socket)
 					current_socket.close()
 
@@ -446,6 +458,20 @@ def main_server():
 							if command[0] == "spec":			#spectate a game
 								g = int(command[1])
 								client.cSpec = g
+							if command[0] == "join":
+								for p in host.players:
+									if p.pClient != None and p.pClient.name == command[1]:
+										if p.isWaiting == 1:
+											for p2 in host.players:
+												if p2.isWaiting == -1 and p2.pGame == p.pGame:
+													p2.pClient = client
+													p2.isWaiting = 0
+													p.isWaiting = 0
+													client.cType = 1
+													client.sendMessage("Reconnected against " + p.pClient.name)
+													p.pClient.sendMessage("Your opponent " + client.name + " reconnected.")
+
+
 
 #_______________________________________FIN MAIN SERVEUR _________________________________________________________________________________
 
