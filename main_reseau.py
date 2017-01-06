@@ -253,15 +253,18 @@ class Host:
 		p2 = None
 		for p in self.players:
 			if p.pGame == game:
-				p.pClient.cType = 0
+				if p.pClient != None:
+					p.pClient.cType = 0
 				if p1 == None:
 					p1 = p
 				else:
 					p2 = p
 		#self.players.remove(p1)
 		#self.players.remove(p2)
-		p1.pClient = None
-		p2.pClient = None
+		if p1 != None:
+			p1.pClient = None
+		if p2 != None:
+			p2.pClient = None
 		self.hGrid[game] = grid()
 
 	def getPlayers(self, game):
@@ -399,6 +402,7 @@ def main_server():
 					if client.cType == 1:
 						player = host.getPlayer(host.getPlayerId(current_socket))
 						player.isWaiting = -1
+						player.pClient = None
 					for p in host.players:
 						if p.pGame == player.pGame and p.pId != player.pId and p.pClient != None:
 							p.sendMessage("Your opponent " + client.name + " has disconnected. You can wait for him to reconnect or quit by typing 'quit'.")
@@ -409,6 +413,17 @@ def main_server():
 
 				elif pId != -1:
 					player = host.getPlayer(pId)
+					if bytes_recv == "quit":
+						(p1, p2) = host.getPlayers(player.pGame)
+						log = "Match canceled by " + player.pClient.name
+						for c in host.listClient:
+							if c.cType != 1:
+								c.sendMessage(log)
+						if p1 != None and p1.pClient != None:
+							p1.sendMessage(log)
+						if p2 != None and p2.pClient != None:
+							p2.sendMessage(log)
+						host.endGame(player.pGame)
 					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
 						try:
 							isMoveOk = host.playMove(player.pGame, int(bytes_recv))
