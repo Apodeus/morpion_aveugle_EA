@@ -93,6 +93,7 @@ class Client:
 	score = 0
 	name = "nameless"
 	cType = 0 #0 = spec, 1=player
+	cSpec = -1
 
 	def __init__(self, socket):
 		self.socket = socket
@@ -159,8 +160,6 @@ class Host:
 		return self.hGrid[game].gameOver()
 
 	def playMove(self, game, case):	#returns True if ok
-		print("game:" + str(game))
-		print("case:" + str(case))
 		if self.hGrid[game].cells[case] == EMPTY: #Si personne a joué cette case, alors on effectue le coup correctement
 			self.hGrid[game].play(self.currentPlayer[game], case)
 			self.players[2 * game + self.currentPlayer[game] - 1].pGrid.play(self.currentPlayer[game], case)
@@ -193,6 +192,7 @@ class Host:
 		p.setId(len(self.players))
 		p.pGame = -1
 		client.cType = 1
+		client.cSpec = -1
 
 	def getPlayerId(self, socket):
 		for p in self.players:
@@ -262,6 +262,17 @@ class Host:
 		p2.pClient = None
 		self.hGrid[game] = grid()
 
+	def getPlayers(self, game):
+		p1 = None
+		p2 = None
+		for p in self.players:
+			if p.pClient != None and p.pGame == game:
+				if p1 == None:
+					p1 = p
+				else:
+					p2 = p
+		return (p1, p2)
+
 
 class thread_r(threading.Thread):
 	def __init__(self, s):
@@ -273,7 +284,6 @@ class thread_r(threading.Thread):
 			data = bytes.decode(self.socket_client.recv(1024) )
 			if (len(data) != 0):
 				parsed_data = re.findall('\$[a-zA-Z0-9]+', data)
-				print(parsed_data)
 				if parsed_data:
 					for i in range(len(parsed_data)):
 						word = parsed_data[i]
@@ -366,7 +376,7 @@ def main_server():
 		for current_socket in ready_sockets:
 			if current_socket == host.socketListener: #Connexion d'un nouveau client
 				host.addNewClient()
-				print("Nouveau client connecté")
+				print("A new client connected")
 			else: 
 				cId = host.getClientId(current_socket)
 				pId = host.getPlayerId(current_socket)
@@ -380,11 +390,10 @@ def main_server():
 							if spec_message == "nameless":
 								spec_message = "Player" + str(host.currentPlayer[player.pGame])
 							spec_message += " played on case " + bytes_recv + "\n"
-							for client in host.listClient:
-								if client.cType != 1:
-									client.sendMessage(spec_message)
-									print("data:" + host.hGrid[player.pGame].displayStr())
-									client.sendMessage(host.hGrid[player.pGame].displayStr())
+							for c in host.listClient:
+								if c.cType != 1 and c.cSpec == player.pGame:
+									c.sendMessage(spec_message)
+									c.sendMessage(host.hGrid[player.pGame].displayStr())
 							host.switchPlayer(player.pGame)
 				else:
 					client = host.getClient(cId)
@@ -392,6 +401,11 @@ def main_server():
 						host.setNewPlayer(host.getClient(cId))
 						if host.isGameReady() == 1:
 							host.startGame()
+							idGame = len(host.hGrid) - 1
+							(p1, p2) = host.getPlayers(idGame)
+							for c in host.listClient:
+								if c.cType != 1 :
+									c.sendMessage("A game started between " + p1.pClient.name + " and " + p2.pClient.name + " (ID:" + str(idGame) + ")")
 						else:
 							print(client.name + " is looking for an opponent")
 							host.getClient(cId).sendMessage("Waiting for opponent...")
@@ -402,12 +416,16 @@ def main_server():
 						client.sendMessage(host.getScoresString())
 					if len(bytes_recv) > 4 and bytes_recv[4] == ':':				#commande
 						command = bytes_recv.split(':')
-						if command[0] == "name": 			#set client name
-							if client.name == "nameless":
-								print(command[1] + " joined")
-							else:
-								print(client.name + " changed name to " + command[1])
-							client.setName(command[1])
+						if len(command) == 2:
+							if command[0] == "name": 			#set client name
+								if client.name == "nameless":
+									print(command[1] + " joined")
+								else:
+									print(client.name + " changed name to " + command[1])
+								client.setName(command[1])
+							if command[0] == "spec":			#spectate a game
+								g = int(command[1])
+								client.cSpec = g
 
 #_______________________________________FIN MAIN SERVEUR _________________________________________________________________________________
 
