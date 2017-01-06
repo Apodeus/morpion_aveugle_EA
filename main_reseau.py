@@ -335,7 +335,7 @@ class thread_s(threading.Thread):
 			if text == "help":
 				print("Available commands : \n name:<name> \t Change your current name to <name>\n play \t\t Start a game against another player\n spec:<ID> \t Watch game <ID>")
 			elif play_mode == 1:
-				self.socket_client.send(str.encode(str(int(text))))
+				self.socket_client.send(str.encode(text))
 			else:
 				self.socket_client.send(str.encode(text))
 
@@ -410,7 +410,12 @@ def main_server():
 				if pId != -1:
 					player = host.getPlayer(pId)
 					if pId == host.currentPlayer[player.pGame] + 2 * player.pGame:
-						isMoveOk = host.playMove(player.pGame, int(bytes_recv))
+						try:
+							isMoveOk = host.playMove(player.pGame, int(bytes_recv))
+						except ValueError:
+							isMoveOk = False
+							
+						# isMoveOk = host.playMove(player.pGame, int(bytes_recv))
 						if isMoveOk: #Si l'action s'est bien déroulé
 							spec_message = player.pClient.name
 							if spec_message == "nameless":
